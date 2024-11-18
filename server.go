@@ -52,7 +52,7 @@ func main() {
 		//Acquire a semaphore slot
 		semaphore <- struct{}{}
 		wg.Add(1)
-
+		//use go routine to handle connections concurrently
 		go func(conn net.Conn) {
 			defer conn.Close()
 			//Release semaphore
@@ -165,7 +165,8 @@ func handlePOST(conn net.Conn, reader *bufio.Reader, path string) {
 	contentLength, err := strconv.ParseInt(header["Content-Length"], 10, 64)
 	if err != nil {
 		fmt.Println("Error contentLength:", err)
-		writeErrorResponse(conn, 500, "Internal Server Error")
+		writeErrorResponse(conn, 400, "Bad Request")
+		return
 	}
 	//Limit the size of the reader to Content-Length
 	limitedReader := &io.LimitedReader{
@@ -180,6 +181,7 @@ func handlePOST(conn net.Conn, reader *bufio.Reader, path string) {
 		//debug messages
 		fmt.Println("Error copying data:", err)
 		writeErrorResponse(conn, 500, "Internal Server Error")
+		return
 	}
 	defer file.Close()
 
@@ -224,11 +226,14 @@ func handleConn(conn net.Conn) {
 
 }
 func writeErrorResponse(conn net.Conn, statusCode int, message string) {
-	response := fmt.Sprintf("HTTP/1.1 %d %s\r\n\r\n%s\r\n", statusCode, message, message)
-	conn.Write([]byte(response))
+	// response := fmt.Sprintf("HTTP/1.1 %d %s\r\n\r\n%s\r\n", statusCode, message, message)
+	// conn.Write([]byte(response))
+	fmt.Fprintf(conn, "HTTP/1.1 %d %s\r\n\r\n%s\r\n", statusCode, message, message)
 }
 
 func writeSuccessResponse(conn net.Conn, message string) {
-	response := fmt.Sprintf("HTTP/1.1 200 OK\r\n\r\n%s\r\n", message)
-	conn.Write([]byte(response))
+	// response := fmt.Sprintf("HTTP/1.1 200 OK\r\n\r\n%s\r\n", message)
+	// conn.Write([]byte(response))
+	fmt.Fprintf(conn, "HTTP/1.1 200 OK\r\n\r\n%s\r\n", message)
+
 }
